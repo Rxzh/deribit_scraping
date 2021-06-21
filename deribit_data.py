@@ -1,48 +1,41 @@
 import requests
 import pandas as pd
-import numpy as np
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 import time
 
-class Options:
+class Scraper:
     def __init__(self, currency="BTC"):
         """
-        Initializing `Options` class.
+        Initialise la classe `Options`.
 
-        Parameters
+        Paramètres
         ----------
-        currency: string ("BTC" or "ETH")
-            The cryptocurrency that will be used to retrieve all option
-            and volatility related data. The default parameter is "BTC".
+        currency: string ("BTC" ou "ETH")
+            
+            La crypto-monnaie qui sera utilisée pour récupérer toutes les données relatives aux options et à la volatilité.
+            Le paramètre par défaut est "BTC".
 
-        Example
+        Exemple
         ---------
         >>> import deribit_data as dm
-        >>> data = dm.Options(currency = "BTC")
+        >>> data = dm.Scraper(currency = "BTC")
         """
+
         self.url = 'https://www.deribit.com/api/v2/public/'
         self.currency = str.lower(currency)
 
     def get_hist_vol(self, save_csv=False):
         """
-        Retrieves the asset's annualised historical volatility measured
-        every hour for the past 15 days.
+        Récupère la volatilité historique annualisée de l'actif, mesurée toutes les heures au cours des 15 derniers jours.
+        
+        Paramètres
+        ======================
+        Input: save_csv: boolean, pour choisir ou non de sauvegarder en csv.
+        =======================
+        Output: dataframe des volatilités
 
-        Parameters
-        -------------
-        save_csv: boolean
-            Select True to save the historical volatility to a csv file.
-
-        Returns
-        -------------
-        dataframe:
-            A time-series dataframe
-
-        csv:
-            A csv file will be saved if save_csv is set to True
-
-        Example
+        Exemple
         -------------
         >>> df = data.get_hist_vol()
         >>> df.tail()
@@ -59,23 +52,19 @@ class Options:
         df.columns = ['date', str(self.currency.lower())+'_hist_vol']
         df['date'] = pd.to_datetime(df.date, unit='ms')
         df = df.set_index("date")
-        if save_csv == True:
+        if save_csv :
             df.to_csv(str(self.currency) + "_hist_vol.csv")
         return df
 
     def get_options_list(self):
         """
-        This method is used to retrieve the option type and instrument name.
-        The output of this method is used as an input to the `get_option_stats`
-        method.
+        Cette méthode est utilisée pour récupérer le type d'option et le nom de l'instrument.
+        La sortie de cette méthode est utilisée comme entrée dans la méthode `get_option_stats'.
+        de la méthode "get_option_stats".
+        =======================
+        Output  dataframe
 
-        Returns
-        -------------
-        dataframe:
-            A dataframe with relevant information which is fed into the
-            `get_option_stats` method.
-
-        Example
+        Exemple
         -------------
         >>> df = data.get_options_list()
         >>> df.head()
@@ -94,16 +83,15 @@ class Options:
 
     def get_option_urls(self):
         """
-        Used to retrieve the URL links for all options which are inputted to the
-        `collect_data` method.
+        Utilisé pour récupérer les liens URL pour toutes les options qui sont saisies dans la méthode
+        méthode `collect_data`.
 
         Returns
         -------------
-        list:
-            A dataframe with relevant information which is fed into the
-            `get_option_stats` method.
+        list
+            
 
-        Example
+        Exemple
         -------------
         >>> data.get_options_urls()
         ['https://www.deribit.com/api/v2/public/get_order_book?instrument_name=BTC-4SEP20-13250-P',
@@ -121,37 +109,34 @@ class Options:
 
     def request_get(self, url):
         """
-        An intermediate function used in conjunction with the `collect_data` method.
+        Une fonction intermédiaire utilisée en conjonction avec la méthode `collect_data`.
         """
         page = requests.get(url)
-
         time.sleep(1)
-        
         return page.json()['result']
 
 
     def collect_data(self, max_workers=20, save_csv=False):
         """
-        Retrieves the price, implied volatility, volume, open interest, greeks
-        and other relevant data for all options of the selected asset.
+        Récupère le prix, la volatilité implicite, le volume, 
+        les greeks et d'autres données pertinentes pour toutes les options de l'actif sélectionné.
 
-        Parameter:
-        ------------
-        max_workers: integer
-            Select the maximum number of threads to execute calls asynchronously (Default 20)
+        ========================
+        Input:  max_workers: integer
+                Sélectionne le nombre maximum de threads pour exécuter les appels de manière asynchrone (par défaut 20).
+                -----------------
+                save_csv: boolean
+                Sélectionnez True pour sauvegarder les données des options dans un fichier csv. (False par défaut.)
+        =========================
+        Output: dataframe:
+                un dataframe avec les connées correspondantes pour chaque option.
+                -----------------
+                csv:
+                Un fichier csv avec ces données, si save_csv est à True
+        =========================
 
-        save_csv: boolean
-            Select True to save the options data to a csv file (Default False)
 
-        Returns
-        -------------
-        dataframe:
-            A dataframe with corresponding statistics for each option
-
-        csv:
-            A csv file will be saved if save_csv is set to True (Default is False)
-
-        Example
+        Exemple
         -------------
         >>> df = data.collect_data()
         >>> df.columns
@@ -173,14 +158,15 @@ class Options:
         4	BTC-25SEP20-9000-P	0.1770	83.37	266.9
         """
         raw_data = []
-        pool = ThreadPoolExecutor(max_workers=20)
+        pool = ThreadPoolExecutor(max_workers=max_workers)
         print("Collecting data...")
         for asset in pool.map(self.request_get, self.get_option_urls()):
             raw_data.append(asset)
         df = pd.DataFrame(raw_data)
         df['option_type'] = [df.instrument_name[i][-1] for i in range(len(df))]
         df = df.loc[:, ~df.columns.duplicated()]
-        label = datetime.now().strftime(str(self.currency) + "_options_data" +'-%Y_%b_%d-%H_%M_%S.csv')
-        df.to_csv(label)
+        if save_csv:
+            label = datetime.now().strftime(str(self.currency) + "_options_data" +'-%Y_%b_%d-%H_%M_%S.csv')
+            df.to_csv(label)
         print("Data Collected")
         return df

@@ -1,0 +1,9 @@
+requests
+pandas
+datetime
+from concurrent.futures import ThreadPoolExecutor
+time
+scipy 
+numpy
+json
+plotly
