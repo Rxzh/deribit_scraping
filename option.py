@@ -3,13 +3,21 @@ from scipy import optimize
 from scipy.stats import norm
 from scipy.optimize import minimize
 import numpy as np
-
+from random import random
 
 class Option:
     def __init__(self, raw_dataframe, option_type = 'B'):
         self.option_type = option_type
         self.df = pipeline(raw_dataframe, option_type=self.option_type)
     
+        self.init_merton(reset = True)
+        """
+        self.m = 1.68542729380368
+        self.v = 0.00036428123601998366
+        self.lam = 4.682520794818356e-05
+        """
+
+
     def CND(self,X):
         """
         Retourne la fonction de répartition de la loi Normale centrée réduite évaluée en x
@@ -99,7 +107,7 @@ class Option:
     """
 
     
-    def implied_v(self, P, S , K, T, r=0.0, right = 'C'):
+    def implied_v_merton(self, P, S , K, T, r=0.0, right = 'C'):
         """
         Retourne une volatilité implicite
         ============================
@@ -111,7 +119,31 @@ class Option:
         for _ in range(1,n+1):
             z = (x+y)/2
 
-            if P > self.BlackScholesPrice(z/(1-z),CallPutFlag=right,S=S,T=T,K=K,r=r):
+            #if P > self.BlackScholesPrice(z/(1-z),CallPutFlag=right,S=S,T=T,K=K,r=r):
+            if P > self.MertonPrice(S=S,K=K,T=T,sigma=z/(1-z),r=r, CallPutFlag = right):
+                x = z
+            else:
+                y = z
+        z = (x+y)/2
+        sigma = z/(1-z)
+        
+        return sigma
+
+    
+    def implied_v_bs(self, P, S , K, T, r=0.0, right = 'C'):
+        """
+        Retourne une volatilité implicite
+        ============================
+        Input:
+        ============================
+        Output:
+        """
+        x,y,n = 0,1,20
+        for _ in range(1,n+1):
+            z = (x+y)/2
+
+            #if P > self.BlackScholesPrice(z/(1-z),CallPutFlag=right,S=S,T=T,K=K,r=r):
+            if P > self.BlackScholesPrice(S=S,K=K,T=T,v=z/(1-z),r=r, CallPutFlag = right):
                 x = z
             else:
                 y = z
@@ -150,12 +182,22 @@ class Option:
         ==================
         Output: None
         """
-        self.df['I_VOL'] = np.vectorize(self.implied_v)(P = self.df['mid'].astype(float),
-                                                    right = self.df['option_type'],
-                                                    S = self.df['S'].astype(float),
-                                                    K = self.df['K'].astype(float),
-                                                    T = self.df['_T'].astype(float)
-                                                    )
+        
+        self.df['I_VOL_MERTON'] = np.vectorize(self.implied_v_merton)(P = self.df['mid'].astype(float),
+                                            right = self.df['option_type'],
+                                            S = self.df['S'].astype(float),
+                                            K = self.df['K'].astype(float),
+                                            T = self.df['_T'].astype(float)
+                                            )
+    
+        self.df['I_VOL_BS'] = np.vectorize(self.implied_v_bs)(P = self.df['mid'].astype(float),
+                                            right = self.df['option_type'],
+                                            S = self.df['S'].astype(float),
+                                            K = self.df['K'].astype(float),
+                                            T = self.df['_T'].astype(float)
+                                            )
+        
+        self.df['IV_moneyness'] = self.df['S']/self.df['I_VOL_BS']
         
     def append_loc_vol_to_df(self, r=0.01):
         """
@@ -167,14 +209,14 @@ class Option:
         Output: None
         """
         
-        if 'I_VOL' not in self.df.columns:
+        if 'I_VOL_BS' not in self.df.columns:
             self.append_imp_vol_to_df(r)
             
         self.df['L_VOL'] = np.vectorize(self.local_v)(  right = self.df['option_type'],
                                                         S = self.df['S'].astype(float),
                                                         K = self.df['K'].astype(float),
                                                         T = self.df['_T'].astype(float),
-                                                        sigma = self.df['I_VOL'].astype(float)
+                                                        sigma = self.df['I_VOL_BS'].astype(float)
                                                         )
 
     def append_BS_price(self):
@@ -182,18 +224,24 @@ class Option:
                                                                 S = self.df['S'].astype(float),
                                                                 K = self.df['K'].astype(float),
                                                                 T = self.df['_T'].astype(float),
-                                                                v = self.df['I_VOL'].astype(float)
+                                                                v = self.df['I_VOL_BS'].astype(float)
                                                                 )
 
 
 
     ############# MERTON #################
 
-    def init_merton(self,m,lam,v):
-        #TODO calibrations
-        self.m = m
-        self.lam = lam
-        self.v = v
+    def init_merton(self,m = None,lam = None,v = None, reset = False):
+        
+        if reset:
+            ## after calibration (RMSE = 0.406%)
+            self.m = 1.68542729380368
+            self.v = 0.00036428123601998366
+            self.lam = 4.682520794818356e-05
+        else:
+            self.m = m
+            self.lam = lam
+            self.v = v
 
     def MertonPrice(self, S,K,T,sigma,r=0.01, q = 0, CallPutFlag = 'C'):
         p = 0
@@ -205,14 +253,14 @@ class Option:
         return p 
 
     def append_Merton_price(self):
-        if 'L_VOL' not in self.df.columns:
+        if 'L_VOL_BS' not in self.df.columns:
             self.append_loc_vol_to_df() #??
 
         self.df['MERTON_PRICE'] = np.vectorize(self.MertonPrice)(CallPutFlag = self.df['option_type'],
                                                                 S = self.df['S'].astype(float),
                                                                 K = self.df['K'].astype(float),
                                                                 T = self.df['_T'].astype(float),
-                                                                sigma = self.df['L_VOL'].astype(float) #changer pour Local VOL ?
+                                                                sigma = self.df['I_VOL_MERTON'].astype(float) #changer pour Local VOL ?
                                                                 )
 
 
@@ -222,22 +270,28 @@ class Option:
                                                             S = self.df['S'].astype(float),
                                                             K = self.df['K'].astype(float),
                                                             T = self.df['_T'].astype(float),
-                                                            sigma = self.df['L_VOL'].astype(float) #changer pour Local
+                                                            sigma = self.df['I_VOL_MERTON'].astype(float) #changer pour Local
                                                             )
 
-        return np.linalg.norm(self.df['mid'] - candidate_prices, 2)
+        return np.linalg.norm(self.df['mark_price'] - candidate_prices, 2)
 
 
-    def optimize_merton(self):
-        x0 = [1, 0.1, 1] # initial guess for algorithm
+    def optimize_merton(self, tol = 1e-10, max_iter = 102):
+        #x0 = [1, 0.1, 1] # initial guess for algorithm
+        x0 = [  random()*(2-0.01)+0.01,
+                0.1,
+                random()*5]
+        #x0 = [0.7910348976571686, 0.3451336374548454, 0.0012410304674673033]
         bounds = ((0.01, 2), (1e-5, np.inf) , (0, 5)) #bounds as described above
 
         res = minimize(self.optimal_params, 
-                        method='SLSQP',  
+                        
+                        method='SLSQP',
+                        #method = 'Nelder-Mead',
                         x0=x0,
                         bounds = bounds, 
-                        tol=1e-20, 
-                        options={"maxiter":1000})
+                        tol=tol, 
+                        options={"maxiter":max_iter})
 
         mt = res.x[0]
         vt = res.x[1]

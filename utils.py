@@ -187,7 +187,7 @@ def pipeline(df, option_type = 'B'):
     #### 
     df['moneyness'] = df['S']/df['K'].astype(float)
 
-    final_df = df[['S','K','V', '_T','bids','asks','last_price','mid_iv','mid', 'moneyness']]
+    final_df = df[['S','K','V', '_T','bids','asks','last_price','mark_price','mid_iv','mark_iv','mid', 'moneyness']]
     
     final_df = final_df.astype(float)
     
