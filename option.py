@@ -52,7 +52,16 @@ class Option:
         
     def dP_dK(self,S,K,T,sigma,right='C',r=0.01):
         """
-        Retourne la dérivée partielle du prix par rapport au strike
+        Retourne la dérivée partielle du prix par rapport au strike        
+        =============================
+        Input:  right : {'C','P'} / caractérise le type d'option
+                K : Strike 
+                T : Maturité
+                S : Prix du sous-jacent
+                v : Volatilité
+                r : Taux d'intérêt 
+        =============================
+        Output: Float
         """
         try:
             d1 = (np.log(S/K)+(r+sigma**2/2.)*T)/(sigma*np.sqrt(T))
@@ -67,6 +76,15 @@ class Option:
     def d2P_dK2(self,S,K,T,sigma,right='C',r=0.01):
         """
         Retourne la dérivée partielle seconde du prix par rapport au strike
+        =============================
+        Input:  right : {'C','P'} / caractérise le type d'option
+                K : Strike 
+                T : Maturité
+                S : Prix du sous-jacent
+                v : Volatilité
+                r : Taux d'intérêt 
+        =============================
+        Output: Float
         """
         try:
             d1 = (np.log(S/K)+(r+sigma**2/2.)*T)/(sigma*np.sqrt(T))
@@ -86,6 +104,15 @@ class Option:
         """
         Retourne la dérivée partielle du prix par rapport à la date d'expiration
         Il s'agit de l'opposé du theta.
+        =============================
+        Input:  right : {'C','P'} / caractérise le type d'option
+                K : Strike 
+                T : Maturité
+                S : Prix du sous-jacent
+                v : Volatilité
+                r : Taux d'intérêt 
+        =============================
+        Output: Float
         """
         try:
             d1 = (np.log(S/K)+(r+sigma**2/2.)*T)/(sigma*np.sqrt(T))
@@ -109,17 +136,20 @@ class Option:
     
     def implied_v_merton(self, P, S , K, T, r=0.0, right = 'C'):
         """
-        Retourne une volatilité implicite
-        ============================
-        Input:
-        ============================
-        Output:
+        Retourne la volatilité implicite pour le modèle de Merton
+        =============================
+        Input:  right : {'C','P'} / caractérise le type d'option
+                K : Strike 
+                T : Maturité
+                S : Prix du sous-jacent
+                P : Prix de l'option
+                r : Taux d'intérêt 
+        =============================
+        Output: Float, volatilité
         """
         x,y,n = 0,1,20
-        for _ in range(1,n+1):
+        for _ in range(n):
             z = (x+y)/2
-
-            #if P > self.BlackScholesPrice(z/(1-z),CallPutFlag=right,S=S,T=T,K=K,r=r):
             if P > self.MertonPrice(S=S,K=K,T=T,sigma=z/(1-z),r=r, CallPutFlag = right):
                 x = z
             else:
@@ -139,10 +169,8 @@ class Option:
         Output:
         """
         x,y,n = 0,1,20
-        for _ in range(1,n+1):
+        for _ in range(n):
             z = (x+y)/2
-
-            #if P > self.BlackScholesPrice(z/(1-z),CallPutFlag=right,S=S,T=T,K=K,r=r):
             if P > self.BlackScholesPrice(S=S,K=K,T=T,v=z/(1-z),r=r, CallPutFlag = right):
                 x = z
             else:
@@ -220,6 +248,13 @@ class Option:
                                                         )
 
     def append_BS_price(self):
+        """
+        Ajoute les prix de Black-Scholes au DataFrame principal
+        ==================
+        Input:  None
+        ==================
+        Output: None
+        """
         self.df['BS_PRICE'] = np.vectorize(self.BlackScholesPrice)(CallPutFlag = self.df['option_type'],
                                                                 S = self.df['S'].astype(float),
                                                                 K = self.df['K'].astype(float),
@@ -232,7 +267,16 @@ class Option:
     ############# MERTON #################
 
     def init_merton(self,m = None,lam = None,v = None, reset = False):
-        
+        """
+        Initialise les paramètres du Modèle de Merton.
+        =============================
+        Input:  m     : Float, Jump Mean
+                lam   : Float, Lambda
+                v     : Float, Jump Standard Deviation
+                reset : Bool, Pour choisir de reset vers les meilleurs paramètres calibrés
+        =============================
+        Output: None
+        """
         if reset:
             ## after calibration (RMSE = 0.406%)
             self.m = 1.68542729380368
@@ -244,6 +288,19 @@ class Option:
             self.v = v
 
     def MertonPrice(self, S,K,T,sigma,r=0.01, q = 0, CallPutFlag = 'C'):
+        """
+        Retourne le prix Merton d'une Option Européene
+        =============================
+        Input:  CallPutFlag : {'C','P'} / caractérise le type d'option
+                K : Strike 
+                T : Maturité
+                S : Prix du sous-jacent
+                v : Volatilité
+                r : Taux d'intérêt 
+                #TODO q
+        =============================
+        Output: Prix BS (float)
+        """
         p = 0
         for k in range(40):
             r_k = r - self.lam*(self.m-1) + (k*np.log(self.m) ) / T
@@ -253,6 +310,13 @@ class Option:
         return p 
 
     def append_Merton_price(self):
+        """
+        Ajoute les prix de Merton au DataFrame principal
+        ==================
+        Input:  None
+        ==================
+        Output: None
+        """
         if 'L_VOL_BS' not in self.df.columns:
             self.append_loc_vol_to_df() #??
 
@@ -265,6 +329,13 @@ class Option:
 
 
     def optimal_params(self, x):
+        """
+        Fonction à minimiser lors de la recherche des paramètres optimaux pour le modèle de Merton.
+        ==================
+        Input:  x  : liste [m, v, lam] des 3 paramètres à optimiser.
+        ==================
+        Output: Vecteur normalisé de la différence des prix sous le modèle de Merton calibré avec x et les prix du marché.
+        """
         self.init_merton(m = x[0]  , lam = x[2], v = x[1])
         candidate_prices = np.vectorize(self.MertonPrice)(  CallPutFlag = self.df['option_type'],
                                                             S = self.df['S'].astype(float),
@@ -276,7 +347,16 @@ class Option:
         return np.linalg.norm(self.df['mark_price'] - candidate_prices, 2)
 
 
-    def optimize_merton(self, tol = 1e-10, max_iter = 102):
+    def optimize_merton(self, tol = 1e-10, max_iter = 102, update_when_done = True):
+        """
+        Fonction à appeler pour optimiser les paramètres des Merton
+        ==================
+        Input:  tol              : Float, Tolérence pour arrêter l'optimisation.
+                max_iter         : Int, Nombre maximum d'itération pour l'optimizer.
+                update_when_done : Bool, Update ou non le modèle de Merton avec les paramètres issus de l'optimisation.
+        ==================
+        Output: None
+        """
         #x0 = [1, 0.1, 1] # initial guess for algorithm
         x0 = [  random()*(2-0.01)+0.01,
                 0.1,
@@ -296,8 +376,8 @@ class Option:
         mt = res.x[0]
         vt = res.x[1]
         lamt = res.x[2]
-
-        self.init_merton(m = mt  , lam = lamt, v = vt)
+        if update_when_done:
+            self.init_merton(m = mt  , lam = lamt, v = vt)
         print('Calibrated Jump Mean = ', mt)
         print('Calibrated Jump Std = ', vt)
         print('Calibrated intensity = ', lamt)
