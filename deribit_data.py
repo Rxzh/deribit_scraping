@@ -7,7 +7,7 @@ import time
 class Scraper:
     def __init__(self, currency="BTC"):
         """
-        Initialise la classe `Options`.
+        Initialise la classe `Scraper`.
 
         Paramètres
         ----------

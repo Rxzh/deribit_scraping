@@ -203,7 +203,7 @@ def pipeline(df, option_type = 'B'):
 def MSE(col1,col2):
     if np.size(col1) != np.size(col2) or np.size(col1)==0:
         raise ValueError("col1 and col2 must be the same size and not null")
-    return np.sum((col1-col2)**2)/np.size(col1)
+    return mean_squared_error(col1, col2, squared=True)
 
 def RMSE(col1,col2):
     if np.size(col1) != np.size(col2) or np.size(col1)==0:
