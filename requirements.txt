@@ -1,8 +1,5 @@
-requests
 pandas
 datetime
-time
 scipy 
 numpy
-json
 plotly
