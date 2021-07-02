@@ -1,6 +1,5 @@
-requests
 pandas
 datetime
 scipy 
 numpy
-plotly=='4.14.3'
+plotly

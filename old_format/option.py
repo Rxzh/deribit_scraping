@@ -550,15 +550,12 @@ class Option:
 
         return np.linalg.norm(self.df['mid'] - candidate_prices, 2)
 
-    def optimize_heston(self, x):
+    def optimize_heston(self, x, tol = 1e-10, max_iter = 102, update_when_done = True):
         #return  least_squares(self.target_f_heston, x0, method='lm').x
         if False:
             return  least_squares(self.r_function, x, method='lm').x
 
         else:
-            tol = 1e-10
-            max_iter = 102
-
             x0 = x
 
             #bounds = ((0.01, 2), (1e-5, np.inf) , (0, 5)) #bounds as described above
