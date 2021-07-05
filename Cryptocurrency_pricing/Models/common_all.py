@@ -3,6 +3,7 @@ from Cryptocurrency_pricing.Models.utils import *
 from scipy.optimize import minimize, least_squares
 import numpy as np
 from random import random
+from scipy.stats import norm
 
 
 class Model:
@@ -34,6 +35,40 @@ class Model:
     def initialize(self, theta = None, reset = False):
         pass
 
+    def CND(self,X):
+        """
+        Retourne la fonction de répartition de la loi Normale centrée réduite évaluée en x
+        """
+        return float(norm.cdf(X))
+
+    def BlackScholesPrice(self,sigma,CallPutFlag = 'C',S = 100.,K = 100.,T = 1.,r = 0.01):
+        """
+        Retourne le prix Black-Scholes d'une Option Européene
+        =============================
+        Input:  CallPutFlag : {'C','P'} / caractérise le type d'option
+                K : Strike 
+                T : Maturité
+                S : Prix du sous-jacent
+                v : Volatilité
+                r : Taux d'intérêt 
+        =============================
+        Output: Prix BS (float)
+        """
+        if CallPutFlag != 'C' and CallPutFlag != 'P':
+            raise ValueError("Mauvais type d'option : {'P','C'}")
+            
+        try:
+            d1 = (np.log(S/K)+(r+sigma**2/2.)*T)/(sigma*np.sqrt(T))
+            d2 = d1-sigma*np.sqrt(T)
+
+            if CallPutFlag == 'C':
+                return S*self.CND(d1)-K*np.exp(-r*T)*self.CND(d2)
+            elif CallPutFlag == 'P':
+                return K*np.exp(-r*T)*self.CND(-d2)-S*self.CND(-d1)
+    
+        except: 
+            return 0.0
+
     def implied_v(self, P, S , K, T, r=0.0, right = 'C'):
         """
         Retourne la volatilité implicite pour le modèle de Merton
@@ -50,7 +85,7 @@ class Model:
         x,y,n = 0,1,20
         for _ in range(n):
             z = (x+y)/2
-            if P > self.Price(S=S,K=K,T=T,sigma=z/(1-z),r=r, CallPutFlag = right):
+            if P > self.BlackScholesPrice(S=S,K=K,T=T,sigma=z/(1-z),r=r, CallPutFlag = right):
                 x = z
             else:
                 y = z

@@ -15,7 +15,8 @@ class Heston(Model):
     def initialize(self, theta = None, reset = False):
 
         if reset:
-            self.theta = np.array([0.41055433, 2.87649559, 1.0035074 , 1.14520439, 2.15878211])
+            #self.theta = np.array([0.41055433, 2.87649559, 1.0035074 , 1.14520439, 2.15878211])
+            self.theta = np.array([0.90260584, 0.42127592, 0.13607334, 0.37337941, 0.20804514])
         
         elif theta is None:
             raise Exception('theta and reset can\'t both be None')

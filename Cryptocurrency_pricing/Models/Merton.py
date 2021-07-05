@@ -1,5 +1,4 @@
 from Cryptocurrency_pricing.Models.common_all import Model
-from scipy.stats import norm
 import numpy as np
 from scipy.optimize import minimize, least_squares
 from random import random
@@ -26,10 +25,12 @@ class Merton(Model):
         """
 
         if reset:
-            ## after calibration (RMSE = 0.406%)
-            self.m = 1.68542729380368
-            self.v = 0.00036428123601998366
-            self.lam = 4.682520794818356e-05
+
+            #self.m = 1.68542729380368
+            #self.v = 0.00036428123601998366
+            #self.lam = 4.682520794818356e-05
+
+            self.m, self.v, self.lam = 9.17579001e-01, 3.50404358e-02, 2.89575783e-04
 
         elif theta is None:
             raise Exception('theta and reset can\'t both be None')
@@ -43,6 +44,12 @@ class Merton(Model):
             self.v = theta[1]
             self.lam = theta[2]
             
+
+
+
+
+
+
 
     def Price(self, S,K,T,sigma,r=0.01, q = 0, CallPutFlag = 'C'):
         """
@@ -63,8 +70,7 @@ class Merton(Model):
             r_k = r - self.lam*(self.m-1) + (k*np.log(self.m) ) / T
             sigma_k = np.sqrt( sigma**2 + (k* self.v** 2) / T)
             k_fact = np.math.factorial(k)
-            #TODO HERE !!!!!!!!!!!!!!! BS PRICE TO GET CHANGED
-            p += (np.exp(-self.m*self.lam*T) * (self.m*self.lam*T)**k / (k_fact)) * self.BlackScholesPrice(v = sigma_k, CallPutFlag=CallPutFlag, S=S, K=K, T=T, r=r_k)
+            p += (np.exp(-self.m*self.lam*T) * (self.m*self.lam*T)**k / (k_fact)) * self.BlackScholesPrice(sigma = sigma_k, CallPutFlag=CallPutFlag, S=S, K=K, T=T, r=r_k)
         return p 
 
 

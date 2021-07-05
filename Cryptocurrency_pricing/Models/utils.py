@@ -2,7 +2,7 @@ import json
 import datetime
 import time
 import numpy as np
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 def somme_ponderee(X):
     """
@@ -201,11 +201,65 @@ def pipeline(df, option_type = 'B'):
 
 
 def MSE(col1,col2):
+    #TODO delete
     if np.size(col1) != np.size(col2) or np.size(col1)==0:
         raise ValueError("col1 and col2 must be the same size and not null")
     return np.sum((col1-col2)**2)/np.size(col1)
 
 def RMSE(col1,col2):
+    #TODO delete
     if np.size(col1) != np.size(col2) or np.size(col1)==0:
         raise ValueError("col1 and col2 must be the same size and not null")
     return mean_squared_error(col1, col2, squared=False)
+
+
+
+def Eval_Metrics(BS,M,H):
+    x = BS.df['K']
+    y = BS.df['_T']
+    z = BS.df['mid']
+
+    x1 = BS.df['K']
+    y1 = BS.df['_T']
+    z1 = BS.df['BS_PRICE']
+
+    x2 = M.df['K']
+    y2 = M.df['_T']
+    z2 = M.df['MERTON_PRICE']
+
+    x3 = H.df['K']
+    y3 = H.df['_T']
+    z3 = H.df['HESTON_PRICE']
+
+    rms_bs     = mean_squared_error(z1, z, squared=False)
+    rms_merton = mean_squared_error(z2, z, squared=False)
+    rms_heston = mean_squared_error(z3, z, squared=False)
+
+    print("=============== Root Mean Squared Error ================")
+
+    print('\nB&S    = {} %'.format(round(rms_bs*100,3)))
+    print('MERTON    = {} %'.format(round(rms_merton*100,3)))
+    print('HESTON    = {} % \n'.format(round(rms_heston*100,3)))
+
+    print("=============== Mean Absolute Error ================")
+
+    mae_bs     = mean_absolute_error(z1, z,)
+    mae_merton = mean_absolute_error(z2, z,)
+    mae_heston = mean_absolute_error(z3, z,)
+
+    #print('Root Mean Squared Error | MERTON = {} %'.format(round(rms_merton*100,6)))
+    print('\nB&S    = {} %'.format(round(mae_bs*100,3)))
+    print('MERTON    = {} %'.format(round(mae_merton*100,3)))
+    print('HESTON    = {} % \n'.format(round(mae_heston*100,3)))
+
+    print("=============== R2 Score ================")
+
+    r2_bs     = r2_score(z1, z,)
+    r2_merton = r2_score(z2, z,)
+    r2_heston = r2_score(z3, z,)
+
+    #print('Root Mean Squared Error | MERTON = {} %'.format(round(rms_merton*100,6)))
+    print('\nB&S    = {} %'.format(round(r2_bs*100,3)))
+    print('MERTON    = {} %'.format(round(r2_merton*100,3)))
+    print('HESTON    = {} % \n'.format(round(r2_heston*100,3)))
+
