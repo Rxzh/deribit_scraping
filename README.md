@@ -378,7 +378,7 @@ print("Market Price        : ${}".format(S*0.077089))
     Market Price        : $2636.8577679300006
 
 
-La vectorisation de cette fonction et son application aux lignes du DataFrame permet de calculer une liste de prix qui pourront être comparés avec ceux du marché. Cela ce fait via la méthode $\tt{append\_price}$.
+La vectorisation de cette fonction et son application aux lignes du DataFrame permet de calculer une liste de prix qui pourront être comparés avec ceux du marché. Cela se fait via la méthode $\tt{append\_price}$.
 
 
 ```python
