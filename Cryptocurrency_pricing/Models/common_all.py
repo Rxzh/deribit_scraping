@@ -211,7 +211,7 @@ class Model:
             Output: None
             """
             
-            self.df['I_VOL'] = np.vectorize(self.implied_v)(P = self.df['mid'].astype(float),
+            self.df['I_VOL'] = np.vectorize(self.implied_v)(P = self.df['mark_price'].astype(float),
                                                 right = self.df['option_type'],
                                                 S = self.df['S'].astype(float),
                                                 K = self.df['K'].astype(float),
@@ -288,7 +288,7 @@ class Model:
                                                     sigma = self.df['I_VOL'].astype(float) #changer pour Local
                                                     )
 
-        return np.linalg.norm(self.df['mid'] - candidate_prices, 2)
+        return np.linalg.norm(self.df['mark_price'] - candidate_prices, 2)
 
 
 

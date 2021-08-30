@@ -48,6 +48,9 @@ class Scraper:
         """
         data = {"currency": self.currency}
         d = requests.get(self.url + "get_historical_volatility?", data)
+        print(":::::::")
+        print(d.json().keys())
+        print(":::::::")
         df = pd.DataFrame(d.json()['result'])
         df.columns = ['date', str(self.currency.lower())+'_hist_vol']
         df['date'] = pd.to_datetime(df.date, unit='ms')
@@ -78,6 +81,7 @@ class Scraper:
         data = {'currency': self.currency, 'kind': 'option'}
         r = requests.get(self.url + 'get_instruments', data)
         df = pd.DataFrame(r.json()['result'])
+
         cols = ['expiration_timestamp', 'option_type', 'instrument_name', 'strike']
         return df[cols]
 
